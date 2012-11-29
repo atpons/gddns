@@ -1,0 +1,105 @@
+#!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
+require "logger"
+require 'rest_client'
+require "nokogiri"
+log = Logger.new("gddns.log")
+log.level = Logger::WARN
+
+# Load config
+begin
+  conf = Hash.new
+  open("config","r:utf-8").each_line do |line|
+    next if line.empty? or line =~ /^#|^$/
+    key,value = line.split(/=/,2) 
+    conf[key.strip] = value.strip
+  end
+  endpoint = "https://" + conf["token"] + ":" + conf["secret"] + "@cp.gehirn.jp/"
+rescue => e
+  puts "Error: Failed to load config file."
+  log.warn("Failed to load config file. Please check config file.")
+  exit()
+end
+
+# Get domain list
+begin
+  list = RestClient.get endpoint + "api/dns/resource/" + conf["domain"] + ".xml"
+rescue RestClient::ResourceNotFound
+  puts "Error: 404 Resource Not Found"
+  puts "You must reconfim config file or ARGV."
+  log.warn("404 Resource Not Found. You must reconfim config file or ARGV.")
+  exit()
+rescue => e
+  puts e
+  log.fatal("Unknown error; exiting")
+  log.fatal(e)
+  exit()
+end
+
+#XML parse
+begin
+  XML = Nokogiri::XML(list)
+rescue => error
+  puts "Error: XML parsing error."
+  puts error
+  log.fatal("XML parsing error; exiting")
+  log.fatal(error)
+end
+
+id = []
+name = []
+ip = []
+
+XML.xpath("//response/Resource/A/ID").children.each do |cam|
+  id.push(cam.text.to_s)
+end
+
+XML.xpath("//response/Resource/A/Name").children.each do |cam|
+  name.push(cam.text.to_s)
+end
+
+XML.xpath("//response/Resource/A/IPAddress").children.each do |cam|
+  ip.push(cam.text.to_s)
+end
+
+ind = name.rindex(conf["record"]).to_i
+
+puts "Domain information:"
+puts "ID: " + id[ind]
+puts "NAME: " + name[ind]
+puts "IP: " + ip[ind]
+
+# Record update
+
+api = endpoint + "api/dns/resource/" + XML.xpath("//response/Domain/ID").children.text.to_s + "/" + id[ind].to_s + ".xml" 
+
+begin
+  case ARGV[0]
+  when nil
+    Update = Nokogiri::XML(RestClient.put api , {:Resource => { :"IPAddress" => "auto" }})
+  else
+    Update = Nokogiri::XML(RestClient.put api , {:Resource => { :"IPAddress" => ARGV[0].to_s  }})
+  end
+rescue RestClient::BadRequest
+  puts "Error: 400 Bad Request"
+  puts "You must reconfim config file or ARGV."
+  log.warn("400 Bad Request. You must reconfim config file or ARGV.")
+  exit()
+rescue RestClient::ResourceNotFound
+  puts "Error: 404 Resource Not Found"
+  puts "You must reconfim config file or ARGV."
+  log.warn("404 Resource Not Found. You must reconfim config file or ARGV.")
+  exit()
+rescue => err
+  puts err
+else
+end
+
+case Update.xpath("//response/Updated").children.text
+when "1"
+  puts "Update successfully."
+  log.info("Update successfully.")
+else
+  puts "Not Updated."
+  log.fatal("Update not successfully.")
+end

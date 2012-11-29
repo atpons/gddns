@@ -1,0 +1,7 @@
+# gddns config
+
+token = example
+secret = example
+domain = example.com
+record = abcd.example.com
+
