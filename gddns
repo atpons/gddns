@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # -*- coding: utf-8 -*-
 require "logger"
-require 'rest_client'
+require 'rest-client'
 require "nokogiri"
 log = Logger.new("gddns.log")
 log.level = Logger::WARN
@@ -11,7 +11,7 @@ begin
   conf = Hash.new
   open("config","r:utf-8").each_line do |line|
     next if line.empty? or line =~ /^#|^$/
-    key,value = line.split(/=/,2) 
+    key,value = line.split(/=/,2)
     conf[key.strip] = value.strip
   end
   endpoint = "https://" + conf["token"] + ":" + conf["secret"] + "@cp.gehirn.jp/"
@@ -50,15 +50,15 @@ id = []
 name = []
 ip = []
 
-XML.xpath("//response/Resource/A/ID").children.each do |cam|
+XML.xpath("//Response/Resource/A/ID").children.each do |cam|
   id.push(cam.text.to_s)
 end
 
-XML.xpath("//response/Resource/A/Name").children.each do |cam|
+XML.xpath("//Response/Resource/A/Name").children.each do |cam|
   name.push(cam.text.to_s)
 end
 
-XML.xpath("//response/Resource/A/IPAddress").children.each do |cam|
+XML.xpath("//Response/Resource/A/IPAddress").children.each do |cam|
   ip.push(cam.text.to_s)
 end
 
@@ -71,7 +71,7 @@ puts "IP: " + ip[ind]
 
 # Record update
 
-api = endpoint + "api/dns/resource/" + XML.xpath("//response/Domain/ID").children.text.to_s + "/" + id[ind].to_s + ".xml" 
+api = endpoint + "api/dns/resource/" + XML.xpath("//Response/Domain/ID").children.text.to_s + "/" + id[ind].to_s + ".xml"
 
 begin
   case ARGV[0]
