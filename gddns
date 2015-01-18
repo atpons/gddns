@@ -95,7 +95,7 @@ rescue => err
 else
 end
 
-case Update.xpath("//response/Updated").children.text
+case Update.xpath("//Response/Updated").children.text
 when "1"
   puts "Update successfully."
   log.info("Update successfully.")
